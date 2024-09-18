@@ -59,7 +59,31 @@ MODULE_PARM_DESC(crs_elements, "Initial CRS elements: x0, x1, ..., x_{k-1}");
 module_param(crs_c, byte, 0);
 MODULE_PARM_DESC(crs_c, "CRS constant");
 
+static int __init my_init(void)
+{
+        size_t i;
 
+        /* From the guide  */
+        major = register_chrdev(0, DEVICE_NAME, &fops);
+        if (major < 0) {
+                pr_alert("FAIL MAJOR %d\n", major);
+                return major;
+        }
+        pr_info("OK MAJOR%d\n", major);
+
+        /* From the guide */
+        cls = class_create(DEVICE_NAME);
+        device_create(cls, NULL, MKDEV(major, 0), NULL, DEVICE_NAME);
+        pr_info("OK DEVICE PATH /dev/%s\n", DEVICE_NAME);
+
+        /* Convert recieving number into f_{2^8}*/
+        for (i = 0; i < k_length; i++) {
+                ff_crs_coefficients[i] = uint8_to_ff_elem(crs_coefficients[i]);
+                ff_crs_elements[i] = uint8_to_ff_elem(crs_elements[i]);
+        }
+        ff_crs_c = uint8_to_ff_elem(crs_c);
+        return SUCCESS;
+}
 
 
 MODULE_LICENSE("GPL");
