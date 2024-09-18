@@ -59,13 +59,13 @@ MODULE_PARM_DESC(crs_elements, "Initial CRS elements: x0, x1, ..., x_{k-1}");
 module_param(crs_c, byte, 0);
 MODULE_PARM_DESC(crs_c, "CRS constant");
 
+/* Init dev in Kernel */
 static int __init my_init(void)
 {
-        size_t i;
-
         /* From the guide  */
         major = register_chrdev(0, DEVICE_NAME, &fops);
-        if (major < 0) {
+        if (major < 0) 
+        {
                 pr_alert("FAIL MAJOR %d\n", major);
                 return major;
         }
@@ -77,7 +77,8 @@ static int __init my_init(void)
         pr_info("OK DEVICE PATH /dev/%s\n", DEVICE_NAME);
 
         /* Convert recieving number into f_{2^8}*/
-        for (i = 0; i < k_length; i++) {
+        for (size_t i = 0; i < k_length; i++) 
+        {
                 ff_crs_coefficients[i] = uint8_to_ff_elem(crs_coefficients[i]);
                 ff_crs_elements[i] = uint8_to_ff_elem(crs_elements[i]);
         }
@@ -85,6 +86,26 @@ static int __init my_init(void)
         return SUCCESS;
 }
 
+static void __exit my_clean(void)
+{       
+        ff_elem_free(ff_crs_c);
+        for (size_t i = 0; i < k_length; ++i) {
+                ff_elem_free(ff_crs_coefficients[i]);
+                ff_elem_free(ff_crs_elements[i]);
+        }
+        device_destroy(cls, MKDEV(major, 0));
+        class_destroy(cls);
+        unregister_chrdev(major, DEVICE_NAME);
+        pr_info("OK clear\n");
+        return;
+}
+
+static ssize_t my_write(struct file *file, const char __user *buffer, size_t count, loff_t *offset)
+{
+        /* We don't write, we run it through the Kernel parameters */
+        pr_alert("ERROR CAN'T WRITE.\n");
+        return -EINVAL; 
+}
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vadim Ploskarev");
