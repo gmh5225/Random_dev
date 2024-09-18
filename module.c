@@ -107,6 +107,25 @@ static ssize_t my_write(struct file *file, const char __user *buffer, size_t cou
         return -EINVAL; 
 }
 
+static int my_open(struct inode *inode, struct file *file)
+{
+        /*compare-and-exchange*/
+        if (atomic_cmpxchg(&cdev_status, CDEV_NOT_USED, CDEV_EXCLUSIVE_OPEN)) {
+                return -EBUSY;
+        }
+        pr_info("OK OPEN\n");
+        try_module_get(THIS_MODULE);
+        return SUCCESS;
+}
+
+static int my_release(struct inode *inode, struct file *file)
+{
+        atomic_set(&cdev_status, CDEV_NOT_USED);
+        module_put(THIS_MODULE);
+        pr_info("OK CLOSE\n");
+        return SUCCESS;
+}
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vadim Ploskarev");
 MODULE_DESCRIPTION("Generator of random numbers.");
