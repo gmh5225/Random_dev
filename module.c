@@ -126,6 +126,38 @@ static int my_release(struct inode *inode, struct file *file)
         return SUCCESS;
 }
 
+static ssize_t my_read(struct file *file, char __user *buffer, size_t count, loff_t *offset)
+{
+        ff_elem_t *next_element, *product, *accumulated_sum, *tmp;
+        size_t i;
+        uint8_t byte_to_user = 0; 
+        next_element = NULL;
+        tmp = ff_get_zero(&ff_d8_p2);
+        for (i = 0; i < k_length; i++) {
+                product = ff_multiply(ff_crs_coefficients[i], ff_crs_elements[i]);
+                accumulated_sum = ff_sum(tmp, product);
+                ff_elem_free(product);
+                ff_elem_free(tmp);
+                tmp = accumulated_sum;
+        }
+        
+        next_element = ff_sum(tmp, ff_crs_c);
+        ff_elem_free(tmp);
+        ff_elem_free(ff_crs_elements[0]);
+        memmove(ff_crs_elements, ff_crs_elements + 1, (k_length - 1) * sizeof(ff_elem_t*));
+
+        ff_crs_elements[k_length - 1] = next_element;
+        byte_to_user = ff_elem_to_uint8(next_element);
+        
+        if (copy_to_user(buffer, &byte_to_user, sizeof(byte_to_user))) {
+                pr_err("ERROR COPY TO USER.\n");
+        }
+        return 1;
+}
+
+module_init(my_init);
+module_exit(my_clean);
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vadim Ploskarev");
 MODULE_DESCRIPTION("Generator of random numbers.");
